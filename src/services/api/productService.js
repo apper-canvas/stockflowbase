@@ -1,103 +1,360 @@
-import productsData from "@/services/mockData/products.json";
+const { ApperClient } = window.ApperSDK;
 
-let products = [...productsData];
+const apperClient = new ApperClient({
+  apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+  apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+});
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const tableName = 'product';
 
 export const productService = {
   async getAll() {
-    await delay(300);
-    return [...products];
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "sku" } },
+          { field: { Name: "price" } },
+          { field: { Name: "quantity" } },
+          { field: { Name: "low_stock_threshold" } },
+          { field: { Name: "last_updated" } },
+          { field: { Name: "category" } }
+        ],
+        orderBy: [
+          {
+            fieldName: "Name",
+            sorttype: "ASC"
+          }
+        ]
+      };
+
+      const response = await apperClient.fetchRecords(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching products:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
+    }
   },
 
   async getById(id) {
-    await delay(200);
-    const product = products.find(p => p.Id === parseInt(id));
-    if (!product) {
-      throw new Error("Product not found");
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "sku" } },
+          { field: { Name: "price" } },
+          { field: { Name: "quantity" } },
+          { field: { Name: "low_stock_threshold" } },
+          { field: { Name: "last_updated" } },
+          { field: { Name: "category" } }
+        ]
+      };
+
+      const response = await apperClient.getRecordById(tableName, id, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error(`Error fetching product with ID ${id}:`, error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    return { ...product };
   },
 
   async create(productData) {
-    await delay(400);
-    const newId = Math.max(...products.map(p => p.Id)) + 1;
-    const newProduct = {
-      ...productData,
-      Id: newId,
-      lastUpdated: new Date().toISOString()
-    };
-    products.push(newProduct);
-    return { ...newProduct };
+    try {
+      const params = {
+        records: [{
+          Name: productData.name,
+          sku: productData.sku,
+          price: parseFloat(productData.price),
+          quantity: parseInt(productData.quantity),
+          low_stock_threshold: parseInt(productData.lowStockThreshold),
+          category: parseInt(productData.category) || productData.category,
+          last_updated: new Date().toISOString()
+        }]
+      };
+
+      const response = await apperClient.createRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedRecords = response.results.filter(result => !result.success);
+        
+        if (failedRecords.length > 0) {
+          console.error(`Failed to create products ${failedRecords.length} records:${JSON.stringify(failedRecords)}`);
+          throw new Error(failedRecords[0]?.message || 'Failed to create product');
+        }
+
+        return response.results[0].data;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error creating product:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
+    }
   },
 
   async update(id, productData) {
-    await delay(350);
-    const index = products.findIndex(p => p.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Product not found");
+    try {
+      const params = {
+        records: [{
+          Id: parseInt(id),
+          Name: productData.name,
+          sku: productData.sku,
+          price: parseFloat(productData.price),
+          quantity: parseInt(productData.quantity),
+          low_stock_threshold: parseInt(productData.lowStockThreshold),
+          category: parseInt(productData.category) || productData.category,
+          last_updated: new Date().toISOString()
+        }]
+      };
+
+      const response = await apperClient.updateRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedUpdates = response.results.filter(result => !result.success);
+        
+        if (failedUpdates.length > 0) {
+          console.error(`Failed to update products ${failedUpdates.length} records:${JSON.stringify(failedUpdates)}`);
+          throw new Error(failedUpdates[0]?.message || 'Failed to update product');
+        }
+
+        return response.results[0].data;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error updating product:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    const updatedProduct = {
-      ...products[index],
-      ...productData,
-      Id: parseInt(id),
-      lastUpdated: new Date().toISOString()
-    };
-    products[index] = updatedProduct;
-    return { ...updatedProduct };
   },
 
   async delete(id) {
-    await delay(250);
-    const index = products.findIndex(p => p.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Product not found");
+    try {
+      const params = {
+        RecordIds: [parseInt(id)]
+      };
+
+      const response = await apperClient.deleteRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedDeletions = response.results.filter(result => !result.success);
+        
+        if (failedDeletions.length > 0) {
+          console.error(`Failed to delete products ${failedDeletions.length} records:${JSON.stringify(failedDeletions)}`);
+          throw new Error(failedDeletions[0]?.message || 'Failed to delete product');
+        }
+
+        return { success: true };
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error deleting product:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    products.splice(index, 1);
-    return { success: true };
   },
 
   async adjustStock(id, adjustment) {
-    await delay(300);
-    const index = products.findIndex(p => p.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Product not found");
+    try {
+      // First get current product data
+      const currentProduct = await this.getById(id);
+      const newQuantity = Math.max(0, currentProduct.quantity + adjustment.quantity);
+      
+      const params = {
+        records: [{
+          Id: parseInt(id),
+          quantity: newQuantity,
+          last_updated: new Date().toISOString()
+        }]
+      };
+
+      const response = await apperClient.updateRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedUpdates = response.results.filter(result => !result.success);
+        
+        if (failedUpdates.length > 0) {
+          console.error(`Failed to adjust stock ${failedUpdates.length} records:${JSON.stringify(failedUpdates)}`);
+          throw new Error(failedUpdates[0]?.message || 'Failed to adjust stock');
+        }
+
+        return response.results[0].data;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error adjusting stock:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    const product = products[index];
-    const newQuantity = Math.max(0, product.quantity + adjustment.quantity);
-    
-    const updatedProduct = {
-      ...product,
-      quantity: newQuantity,
-      lastUpdated: new Date().toISOString()
-    };
-    products[index] = updatedProduct;
-    return { ...updatedProduct };
   },
 
-  async getLowStockProducts(threshold = null) {
-    await delay(200);
-    return products.filter(product => {
-      const stockThreshold = threshold || product.lowStockThreshold;
-      return product.quantity <= stockThreshold;
-    });
+  async getLowStockProducts() {
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "sku" } },
+          { field: { Name: "price" } },
+          { field: { Name: "quantity" } },
+          { field: { Name: "low_stock_threshold" } },
+          { field: { Name: "last_updated" } },
+          { field: { Name: "category" } }
+        ],
+        whereGroups: [
+          {
+            operator: "AND",
+            subGroups: [
+              {
+                conditions: [
+                  {
+                    fieldName: "quantity",
+                    operator: "LessThanOrEqualTo",
+                    values: ["low_stock_threshold"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      const response = await apperClient.fetchRecords(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      console.error("Failed to get low stock products:", error);
+      return [];
+    }
   },
 
   async searchProducts(query) {
-    await delay(250);
-    const lowercaseQuery = query.toLowerCase();
-    return products.filter(product =>
-      product.name.toLowerCase().includes(lowercaseQuery) ||
-      product.sku.toLowerCase().includes(lowercaseQuery) ||
-      product.category.toLowerCase().includes(lowercaseQuery)
-    );
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "sku" } },
+          { field: { Name: "price" } },
+          { field: { Name: "quantity" } },
+          { field: { Name: "low_stock_threshold" } },
+          { field: { Name: "last_updated" } },
+          { field: { Name: "category" } }
+        ],
+        where: [
+          {
+            FieldName: "Name",
+            Operator: "Contains",
+            Values: [query]
+          },
+          {
+            FieldName: "sku", 
+            Operator: "Contains",
+            Values: [query]
+          }
+        ]
+      };
+
+      const response = await apperClient.fetchRecords(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      console.error("Error searching products:", error);
+      return [];
+    }
   },
 
   async getByCategory(category) {
-    await delay(200);
-    if (!category) return [...products];
-    return products.filter(product => 
-      product.category.toLowerCase() === category.toLowerCase()
-    );
+    try {
+      if (!category) {
+        return await this.getAll();
+      }
+
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "sku" } },
+          { field: { Name: "price" } },
+          { field: { Name: "quantity" } },
+          { field: { Name: "low_stock_threshold" } },
+          { field: { Name: "last_updated" } },
+          { field: { Name: "category" } }
+        ],
+        where: [
+          {
+            FieldName: "category",
+            Operator: "EqualTo",
+            Values: [category]
+          }
+        ]
+      };
+
+      const response = await apperClient.fetchRecords(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      console.error("Error filtering products by category:", error);
+      return [];
+    }
   }
 };

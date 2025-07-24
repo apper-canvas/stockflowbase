@@ -119,7 +119,7 @@ const InventoryPage = () => {
     }
   };
 
-  const handleStockAdjustment = async (adjustmentData) => {
+const handleStockAdjustment = async (adjustmentData) => {
     try {
       await adjustStock(selectedProduct.Id, adjustmentData);
       await stockAdjustmentService.create({

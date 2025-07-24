@@ -1,65 +1,175 @@
-import categoriesData from "@/services/mockData/categories.json";
-import { productService } from "./productService.js";
+const { ApperClient } = window.ApperSDK;
+const apperClient = new ApperClient({
+  apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+  apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+});
 
-let categories = [...categoriesData];
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const tableName = 'category';
 
 export const categoryService = {
   async getAll() {
-    await delay(200);
-    // Update product counts dynamically
-    const products = await productService.getAll();
-    const updatedCategories = categories.map(category => ({
-      ...category,
-      productCount: products.filter(p => p.category === category.name).length
-    }));
-    return updatedCategories;
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "product_count" } }
+        ],
+        orderBy: [
+          {
+            fieldName: "Name",
+            sorttype: "ASC"
+          }
+        ]
+      };
+
+      const response = await apperClient.fetchRecords(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching categories:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
+    }
   },
 
   async getById(id) {
-    await delay(150);
-    const category = categories.find(c => c.Id === parseInt(id));
-    if (!category) {
-      throw new Error("Category not found");
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "product_count" } }
+        ]
+      };
+
+      const response = await apperClient.getRecordById(tableName, id, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error(`Error fetching category with ID ${id}:`, error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    return { ...category };
   },
 
   async create(categoryData) {
-    await delay(300);
-    const newId = Math.max(...categories.map(c => c.Id)) + 1;
-    const newCategory = {
-      ...categoryData,
-      Id: newId,
-      productCount: 0
-    };
-    categories.push(newCategory);
-    return { ...newCategory };
+    try {
+      const params = {
+        records: [{
+          Name: categoryData.name,
+          product_count: 0
+        }]
+      };
+
+      const response = await apperClient.createRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedRecords = response.results.filter(result => !result.success);
+        
+        if (failedRecords.length > 0) {
+          console.error(`Failed to create categories ${failedRecords.length} records:${JSON.stringify(failedRecords)}`);
+          throw new Error(failedRecords[0]?.message || 'Failed to create category');
+        }
+
+        return response.results[0].data;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error creating category:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
+    }
   },
 
   async update(id, categoryData) {
-    await delay(250);
-    const index = categories.findIndex(c => c.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Category not found");
+    try {
+      const params = {
+        records: [{
+          Id: parseInt(id),
+          Name: categoryData.name,
+          product_count: categoryData.product_count || 0
+        }]
+      };
+
+      const response = await apperClient.updateRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedUpdates = response.results.filter(result => !result.success);
+        
+        if (failedUpdates.length > 0) {
+          console.error(`Failed to update categories ${failedUpdates.length} records:${JSON.stringify(failedUpdates)}`);
+          throw new Error(failedUpdates[0]?.message || 'Failed to update category');
+        }
+
+        return response.results[0].data;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error updating category:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    const updatedCategory = {
-      ...categories[index],
-      ...categoryData,
-      Id: parseInt(id)
-    };
-    categories[index] = updatedCategory;
-    return { ...updatedCategory };
   },
 
   async delete(id) {
-    await delay(200);
-    const index = categories.findIndex(c => c.Id === parseInt(id));
-    if (index === -1) {
-      throw new Error("Category not found");
+    try {
+      const params = {
+        RecordIds: [parseInt(id)]
+      };
+
+      const response = await apperClient.deleteRecord(tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const failedDeletions = response.results.filter(result => !result.success);
+        
+        if (failedDeletions.length > 0) {
+          console.error(`Failed to delete categories ${failedDeletions.length} records:${JSON.stringify(failedDeletions)}`);
+          throw new Error(failedDeletions[0]?.message || 'Failed to delete category');
+        }
+
+        return { success: true };
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error deleting category:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      throw error;
     }
-    categories.splice(index, 1);
-    return { success: true };
-  }
+}
 };

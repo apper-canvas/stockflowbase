@@ -1,9 +1,13 @@
 import { motion } from "framer-motion";
+import React, { useContext } from "react";
+import { AuthContext } from "../../App";
 import ApperIcon from "@/components/ApperIcon";
-import SearchBar from "@/components/molecules/SearchBar";
 import Button from "@/components/atoms/Button";
+import SearchBar from "@/components/molecules/SearchBar";
 
 const Header = ({ onSearch, onAddProduct, lowStockCount = 0 }) => {
+  const { logout } = useContext(AuthContext);
+
   return (
     <motion.header
       className="bg-white shadow-sm border-b border-slate-200"
@@ -28,30 +32,33 @@ const Header = ({ onSearch, onAddProduct, lowStockCount = 0 }) => {
 
           {/* Search Bar */}
           <div className="flex-1 max-w-md mx-8">
-            <SearchBar 
-              onSearch={onSearch} 
-              placeholder="Search by name, SKU, or category..."
-            />
+            <SearchBar onSearch={onSearch} />
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-4">
+            {/* Low Stock Indicator */}
             {lowStockCount > 0 && (
-              <motion.div
-                className="flex items-center gap-2 px-3 py-2 bg-warning-50 text-warning-700 rounded-lg border border-warning-200"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2 }}
-              >
+              <div className="flex items-center gap-2 px-3 py-2 bg-warning-50 text-warning-700 rounded-lg">
                 <ApperIcon name="AlertTriangle" size={16} />
-                <span className="text-sm font-medium">
-                  {lowStockCount} low stock
-                </span>
-              </motion.div>
+                <span className="text-sm font-medium">{lowStockCount} Low Stock</span>
+              </div>
             )}
-            <Button onClick={onAddProduct}>
-              <ApperIcon name="Plus" size={16} className="mr-2" />
-              Add Product
+
+            {/* Add Product Button */}
+            <Button onClick={onAddProduct} className="btn-primary">
+              <ApperIcon name="Plus" size={16} />
+              <span className="hidden sm:inline ml-2">Add Product</span>
+            </Button>
+
+            {/* Logout Button */}
+            <Button
+              onClick={logout}
+              variant="ghost"
+              className="text-slate-600 hover:text-slate-800"
+            >
+              <ApperIcon name="LogOut" size={16} />
+              <span className="hidden sm:inline ml-2">Logout</span>
             </Button>
           </div>
         </div>
